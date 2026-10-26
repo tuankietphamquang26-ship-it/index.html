@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lua Script Host</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body { background-color: #0f172a; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4">
+
+  <script>
+    // =========================================================
+    // ⚙️ THAY THÔNG SỐ CỦA BẠN VÀO 3 DÒNG NÀY:
+    // =========================================================
+    const SUPABASE_URL = ""; // URL Supabase của bạn
+    const SUPABASE_KEY = "";  // Anon Key Supabase của bạn
+    const MY_PASSWORD  = "tuankiet2014";                  // Mật khẩu bảo mật bạn tự đặt
+    // =========================================================
+
+    // BỘ XỬ LÝ RAW (Chạy tự động khi Roblox Executer gọi link ?id=...)
+    (async function checkRaw() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const scriptId = urlParams.get('id');
+
+      if (scriptId) {
+        try {
+          const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+          const { data, error } = await _supabase
+            .from('scripts')
+            .select('content')
+            .eq('id', scriptId)
+            .single();
+
+          if (error || !data) {
+            document.body.innerHTML = "<pre style='color:red; font-family:monospace;'>-- Lỗi: Không tìm thấy Script!</pre>";
+          } else {
+            document.body.innerHTML = "";
+            document.write(data.content);
+          }
+        } catch (e) {
+          document.body.innerHTML = "<pre style='color:red; font-family:monospace;'>-- Lỗi kết nối CSDL!</pre>";
+        }
+        window.stop();
+      }
+    })();
+  </script>
+
+  <!-- GIAO DIỆN CHÍNH -->
+  <div class="w-full max-w-lg bg-slate-800 border border-slate-700 rounded-xl shadow-2xl p-6 space-y-4">
+    <div class="text-center">
+      <h1 class="text-2xl font-extrabold text-blue-400">Roblox Lua Host</h1>
+      <p class="text-xs text-slate-400 mt-1">Dán code thô & Nhập mật khẩu để lấy Link Raw</p>
+    </div>
+
+    <!-- Form nhập -->
+    <div class="space-y-3">
+      <div>
+        <label class="block text-xs font-medium text-slate-300 mb-1">Nội dung Script (Lua):</label>
+        <textarea id="scriptContent" rows="10" placeholder="Dán đoạn mã Lua Roblox vào đây..." class="w-full p-3 bg-slate-900 border border-slate-700 rounded-lg text-xs font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-slate-300 mb-1">Mật khẩu xác thực:</label>
+        <input id="authPassword" type="password" placeholder="Nhập mật khẩu để tạo link" class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+
+      <button onclick="createScript()" class="w-full py-3 bg-blue-600 hover:bg-blue-500 font-bold rounded-lg transition shadow-lg shadow-blue-600/30">
+        🚀 Tạo Link Raw
+      </button>
+    </div>
+
+    <!-- Kết quả Link Raw -->
+    <div id="resultArea" class="hidden p-4 bg-emerald-950/40 border border-emerald-500/30 rounded-lg space-y-2">
+      <span class="text-xs font-semibold text-emerald-400">✅ Link Raw công khai:</span>
+      <div class="flex items-center space-x-2">
+        <input id="rawUrlInput" type="text" readonly class="w-full p-2 bg-slate-900 text-xs font-mono text-emerald-300 border border-emerald-500/20 rounded">
+        <button onclick="copyRawUrl()" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-xs font-bold rounded whitespace-nowrap">Sao chép</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    async function createScript() {
+      const content = document.getElementById('scriptContent').value.trim();
+      const password = document.getElementById('authPassword').value;
+
+      if (!content) {
+        alert("Vui lòng dán nội dung Script Lua!");
+        return;
+      }
+
+      // Kiểm tra mật khẩu
+      if (password !== MY_PASSWORD) {
+        alert("❌ Sai mật khẩu! Bạn không có quyền đăng script.");
+        return;
+      }
+
+      try {
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        // Lưu script với tiêu đề mặc định là 'Untitled'
+        const { data, error } = await _supabase
+          .from('scripts')
+          .insert([{ title: 'Raw Script', content: content }])
+          .select();
+
+        if (error) {
+          alert("Lỗi Supabase: " + error.message);
+        } else {
+          const scriptId = data[0].id;
+          const rawUrl = `${window.location.origin}${window.location.pathname}?id=${scriptId}`;
+          document.getElementById('rawUrlInput').value = rawUrl;
+          document.getElementById('resultArea').classList.remove('hidden');
+        }
+      } catch (err) {
+        alert("Có lỗi xảy ra: " + err.message);
+      }
+    }
+
+    function copyRawUrl() {
+      const input = document.getElementById('rawUrlInput');
+      input.select();
+      navigator.clipboard.writeText(input.value);
+      alert("Đã sao chép Link Raw thành công!");
+    }
+  </script>
+</body>
+</html>
